@@ -173,19 +173,33 @@ get-squares (fn get-squares [rectangle]
           :when square] 
       square)))
 
-;; Initially n vectors, constraints = [max-n max-n], acc = []
-get-squares-on-line (fn get-squares-on-line [vectors n max-n constraints acc]
+;; Initially n vectors, constraints = [0 0], acc = []
+get-squares-on-line (fn get-squares-on-line [vectors n max-n cl cr acc]
   (if (empty? vectors)
     [acc]
-    "bogus"
-    ;; for each possible x + string + y filter based on previous constraints
-    ;; actually reverse that!  strip of the ends as appropriate then partition
-    ;;   (comment mapcat ())
-    ;;   (comment )
-))
-]
+    (let [line           (first vectors)
+          squares-seq    (map vec (partition n 1 line))
+          left-seq       (map #(max % cl) (range))
+          right-seq      (map #(max % cr) (iterate dec (- (count line) n)))
+          next-calls     (map #(vector % %2 %3) squares-seq left-seq right-seq)
+          ttt            (println next-calls)
+          should-call?   (fn [[v nl nr]] (<= (+ n nl nr) max-n))
+          filter-calls   (filter should-call? next-calls)]
+      (mapcat (fn [[v nl nr]]
+                (get-squares-on-line (rest vectors) n max-n nl nr (conj acc v)))
+              filter-calls))))
+
+get-squares-n (fn get-squares-n [vectors n]
+  (let [max-n (reduce max (map count vectors))]
+    (mapcat #(get-squares-on-line % n max-n 0 0 []) (partition n 1 vectors))))
+
+get-squares (fn get-squares [vectors]
+  (let [max-sq (min (count vectors) (reduce max (map count vectors)))]
+    (mapcat #(get-squares-n vectors %) (range 2 (inc max-sq)))))]
 
 (fn find-all [vectors]
+  ;;(println (get-squares [[1 2 3] [4 5 6] [7 8 9]]))
+  (println (get-squares-n [[1 2 3] [4 5 6] [7 8 9]] 2))
   (time (reduce
     (fn [p x] (update-in p [(count x)] (fnil inc 0)))
     {}
