@@ -70,20 +70,27 @@ get-squares (fn get-squares [vectors]
    [1 8 5 2 4]
    [8 1 2 4 5]])))))
 
-(println (take 200 (
+(println (take 10 (
 
 (let [
-  gen-strs (fn gen-strs [prefix state dfa]
-    (concat
-     (if (get-in dfa [:accepts state]) [prefix] [])                                                                                                             
-     (lazy-seq (mapcat
-      (fn [[letter next-state]] (gen-strs (conj prefix letter) next-state dfa))
-      ((fnil shuffle []) (seq (get-in dfa [:transitions state])))))))                                                                                            
-]
+  expand-state (fn expand-state [dfa state prefix]
+    (map #(vector (second %) (conj prefix (first %)))(seq (get-in dfa [:transitions state]))))
+
+  gen-strs (fn gen-strs [dfa q]
+    (if (empty? q)
+      []
+      (let [[state prefix] (peek q)
+            new-rest  (lazy-seq (gen-strs dfa (into (pop q) (expand-state dfa state prefix))))]
+        (if (get-in dfa [:accepts state])
+          (cons prefix new-rest)
+          new-rest))))]
 
 (fn [dfa]
-  (map #(apply str %) (gen-strs [] (dfa :start) dfa)))                                                                                                          
-)
+  (map
+   #(apply str %)
+   (gen-strs
+    dfa
+    (conj (clojure.lang.PersistentQueue/EMPTY) [(get-in dfa [:start]) []] )))))
 
 ;;;
 ;;'{:states #{q0}
